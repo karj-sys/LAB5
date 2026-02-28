@@ -1,95 +1,108 @@
 <template>
-  <div class="mood-container">
-    <div class="card header-card">
-      <h2>Mood Check-in</h2>
-      <p class="subtitle">How are you feeling today? Let's record your thoughts.</p>
-    </div>
+  <div class="container">
+    <h1>Mood Check-in</h1>
 
+    <!-- Input Section -->
     <div class="card form-card">
-      <div class="form-group">
-        <label>Full Name</label>
-        <input v-model="name" placeholder="Enter your name" />
-        
-        <label>Current Mood</label>
-        <textarea v-model="mood" placeholder="Share what's on your mind..."></textarea>
-        
-        <button @click="submitMood" :disabled="loading" class="submit-btn">
-          <span v-if="loading" class="spinner"></span>
-          {{ loading ? 'Processing...' : 'Submit Entry' }}
+      <input
+        v-model="name"
+        placeholder="Your name"
+        :disabled="loading"
+        class="input-field"
+      />
+      <textarea
+        v-model="mood"
+        placeholder="How are you feeling today?"
+        :disabled="loading"
+        class="input-field"
+      ></textarea>
+      <div class="btn-group">
+        <button
+          @click="submitMood"
+          :disabled="loading || !name || !mood"
+          class="btn submit-btn"
+        >
+          <span v-if="loading">Processing...</span>
+          <span v-else>Submit</span>
         </button>
       </div>
+
+      <!-- Error/AI Response Section -->
+      <p v-if="error" class="error-msg">{{ error }}</p>
+      <div v-if="aiMessage" class="ai-box">
+        <strong>AI Advisor:</strong> {{ aiMessage }}
+      </div>
     </div>
 
-    <div class="output-section" v-if="history.length > 0">
-      <div class="table-header">
-        <h3>Recent History</h3>
-        <span class="stats">{{ history.length }} entry(s) recorded</span>
+    <!-- Mood History List -->
+    <div class="card history-card">
+      <div class="history-header">
+        <h3>Mood History</h3>
+        <button @click="fetchHistory" class="btn refresh-btn">Refresh</button>
       </div>
-      
-      <div class="table-container">
-        <table class="db-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Mood</th>
-              <th>AI Response</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(entry, index) in history" :key="index">
-              <td class="name-cell">{{ entry.full_name }}</td>
-              <td>{{ entry.mood_text }}</td>
-              <td class="ai-cell"><i>"{{ entry.ai_message }}"</i></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <table v-if="history.length > 0" class="history-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Mood</th>
+            <th>AI Response</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="entry in history" :key="entry.id">
+            <td>{{ entry.full_name }}</td>
+            <td>{{ entry.mood_text }}</td>
+            <td>{{ entry.ai_message }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else>No history found.</p>
     </div>
   </div>
 </template>
 
 <script>
-// Logic remains 100% untouched as requested
 import api from '../services/api';
 
 export default {
   data() {
-    return { 
-      name: '', 
-      mood: '', 
-      aiMessage: '', 
+    return {
+      name: '',
+      mood: '',
+      aiMessage: '',
       loading: false,
-      history: [] 
+      error: null,
+      history: []
     };
   },
   mounted() {
     this.fetchHistory();
   },
   methods: {
-    async fetchHistory() {
-      try {
-        const res = await api.get('/moods');
-        this.history = res.data;
-      } catch (err) {
-        console.error("Failed to fetch history:", err);
-      }
-    },
     async submitMood() {
-      if (!this.name || !this.mood) return alert("Please fill in both fields");
-      
       this.loading = true;
+      this.error = null;
       try {
-        const res = await api.post('/moods', {
+        const res = await api.post('/api/moods', {
           full_name: this.name,
           mood_text: this.mood
         });
-        this.aiMessage = res.data.ai_message;
-        await this.fetchHistory();
+
+        this.aiMessage = res.data.ai_message || res.data.aiMessage;
         this.mood = '';
+        this.fetchHistory();
       } catch (err) {
-        alert("Submit failed. Make sure the server is running on port 3000.");
+        this.error = "Failed to connect to server. Is the backend running?";
       } finally {
         this.loading = false;
+      }
+    },
+    async fetchHistory() {
+      try {
+        const res = await api.get('/api/moods');
+        this.history = res.data;
+      } catch (err) {
+        console.error("Could not fetch history");
       }
     }
   }
@@ -97,85 +110,118 @@ export default {
 </script>
 
 <style scoped>
-/* Container Layout */
-.mood-container { 
-  max-width: 900px; 
-  margin: 40px auto; 
-  padding: 0 20px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #2c3e50;
-  line-height: 1.6;
+.container {
+  max-width: 700px;
+  margin: 30px auto;
+  font-family: 'Segoe UI', sans-serif;
+  color: #000;
+  background: #fff;
 }
 
-/* Card Styling */
-.card {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  margin-bottom: 24px;
-}
-
-.header-card {
+h1 {
   text-align: center;
-  background: linear-gradient(135deg, #42b983 0%, #35495e 100%);
-  color: white;
+  margin-bottom: 20px;
+  color: #000;
 }
 
-.header-card h2 { margin: 0; font-size: 2rem; }
-.subtitle { opacity: 0.9; margin-top: 8px; }
-
-/* Form Design */
-.form-group { display: flex; flex-direction: column; gap: 15px; }
-label { font-weight: 600; font-size: 0.9rem; color: #64748b; margin-bottom: -10px; }
-
-input, textarea { 
-  padding: 12px 16px; 
-  border: 2px solid #e2e8f0; 
-  border-radius: 8px; 
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #42b983;
-}
-
-textarea { min-height: 120px; resize: vertical; }
-
-/* Button & Spinner */
-.submit-btn { 
-  padding: 14px; 
-  background-color: #42b983; 
-  color: white; 
-  border: none; 
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer; 
-  transition: transform 0.1s, background 0.2s;
-}
-
-.submit-btn:hover { background-color: #3aa876; }
-.submit-btn:active { transform: scale(0.98); }
-.submit-btn:disabled { background-color: #cbd5e1; cursor: not-allowed; }
-
-/* Table Design */
-.output-section { margin-top: 40px; }
-.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.table-container { 
-  background: white;
+.card {
+  background: #fff;
+  padding: 20px;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
-.db-table { width: 100%; border-collapse: collapse; background: white; }
-.db-table th { background: #f8fafc; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding: 15px; border-bottom: 2px solid #f1f5f9; }
-.db-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; }
+.input-field {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  margin-bottom: 12px;
+  font-size: 14px;
+  background: #fff;
+  color: #000;
+  resize: none;
+}
 
-.name-cell { font-weight: 600; color: #42b983; }
-.ai-cell { color: #475569; line-height: 1.4; }
-.stats { font-size: 0.85rem; color: #94a3b8; }
+textarea.input-field {
+  min-height: 80px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.submit-btn {
+  background-color: #000;
+  color: #fff;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #333;
+}
+
+.refresh-btn {
+  background: #000;
+  color: #fff;
+}
+
+.refresh-btn:hover {
+  background: #333;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-box {
+  background: #f2f2f2;
+  padding: 15px;
+  border-left: 5px solid #000;
+  margin-top: 12px;
+  border-radius: 6px;
+  color: #000;
+}
+
+.error-msg {
+  color: #b00020;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.history-card .history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  border: 1px solid #aaa;
+  padding: 10px;
+  text-align: left;
+  color: #000;
+}
+
+.history-table th {
+  background-color: #e0e0e0;
+}
 </style>
