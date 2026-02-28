@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import moodRoutes from "./routes/moods.js";
+import moodRoutes from "../routes/moods.js";
 
 dotenv.config();
 
