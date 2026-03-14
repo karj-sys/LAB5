@@ -99,7 +99,7 @@ export default {
   },
   methods: {
     async submitMood() {
-      // --- ADDED LOGIC START ---
+      // --- START OF ADDED LOGIC ---
       console.log("User clicked submit button"); // Log the event
       console.log("Mood value entered:", this.mood); // Log the input data
 
@@ -110,7 +110,7 @@ export default {
       });
 
       console.log("API response status:", response.status); // Log the server response status
-      // --- ADDED LOGIC END ---
+      // --- END OF ADDED LOGIC ---
 
       this.loading = true;
       this.error = null;
