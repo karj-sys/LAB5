@@ -99,16 +99,26 @@ export default {
   },
   methods: {
     async submitMood() {
+      // --- Start of your added logic ---
+      console.log("User clicked submit button"); 
+      console.log("Mood value entered:", this.mood); 
+
       this.loading = true;
       this.error = null;
       this.aiMessage = ''; 
+
       try {
-        const res = await api.post('/moods', {
-          full_name: this.name,
-          mood_text: this.mood
+        const response = await fetch("http://localhost:3000/mood", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mood: this.mood })
         });
 
-        this.aiMessage = res.data.ai_message;
+        console.log("API response status:", response.status); 
+        // --- End of your added logic ---
+
+        const resData = await response.json();
+        this.aiMessage = resData.ai_message || "Mood received!";
         this.mood = '';
         await this.fetchHistory();
       } catch (err) {
