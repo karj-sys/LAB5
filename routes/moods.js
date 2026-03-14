@@ -4,16 +4,7 @@ import pool from "../db.js";
 
 const router = express.Router();
 
-/*
-   BASE PATH = /api/moods
-   So:
-   GET    /api/moods
-   POST   /api/moods
-*/
-
-// ===============================
 // 1️⃣ GET ALL MOOD HISTORY
-// ===============================
 router.get("/", async (req, res) => {
   try {
     const query = `
@@ -37,17 +28,18 @@ router.get("/", async (req, res) => {
   }
 });
 
-
-// ===============================
 // 2️⃣ CREATE NEW MOOD ENTRY
-// ===============================
 router.post("/", async (req, res) => {
+  // --- PART 0.2 LOGGING START ---
+  console.log("POST /mood request received");
+  console.log("Request body:", req.body);
+  // --- PART 0.2 LOGGING END ---
+
   const connection = await pool.getConnection();
 
   try {
     const { full_name, mood_text } = req.body;
 
-    // Basic validation
     if (!full_name || !mood_text) {
       return res.status(400).json({
         success: false,
@@ -55,12 +47,10 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Get AI response
     const ai_message = await getAIResponse(full_name, mood_text);
 
     await connection.beginTransaction();
 
-    // Step 1: Insert or get user
     const [user] = await connection.query(
       `INSERT INTO users (full_name)
        VALUES (?)
@@ -70,7 +60,6 @@ router.post("/", async (req, res) => {
 
     const userId = user.insertId;
 
-    // Step 2: Insert mood entry
     const [mood] = await connection.query(
       `INSERT INTO mood_entries (user_id, mood_text)
        VALUES (?, ?)`,
@@ -79,7 +68,9 @@ router.post("/", async (req, res) => {
 
     const moodEntryId = mood.insertId;
 
-    // Step 3: Insert AI response
+    // --- PART 0.2 LOGGING DATABASE RESULT ---
+    console.log("Database insert result: Mood Entry ID", moodEntryId);
+
     await connection.query(
       `INSERT INTO ai_responses (mood_entry_id, ai_message)
        VALUES (?, ?)`,
